@@ -8,6 +8,8 @@ int DrawSphere3D(const Vector3& CenterPos, const float r, const int DivNum,
 
 int DrawLine3D(const Vector3& Pos1, const Vector3& Pos2, const unsigned int Color);
 
+int SetCameraPositionAndTragetAndUpVec(const Vector3& cameraPos, const Vector3& cameraTarget, const Vector3& cameraUp);
+
 // ウィンドウのタイトルに表示する文字列
 const char TITLE[] = "GC1A_15_ナカザワキョウスケ: タイトル";
 
@@ -44,6 +46,9 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	// (ダブルバッファ)描画先グラフィック領域は裏面を指定
 	SetDrawScreen(DX_SCREEN_BACK);
 
+	SetUseZBuffer3D(true);
+	SetWriteZBuffer3D(true);
+
 	// 画像などのリソースデータの変数宣言と読み込み
 
 
@@ -51,10 +56,27 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	//クリップ面　近　遠
 	SetCameraNearFar(1.0f, 1000.0f);	//カメラの有効範囲を設定
 	SetCameraScreenCenter(WIN_WIDTH / 2.0f, WIN_HEIGHT / 2.0f);	//画面の中心にカメラの中心を合わせる
-	SetCameraPositionAndTargetAndUpVec(
-		VGet(0.0f, 0.0f, -100.0f),
-		VGet(0.0f, 0.0f, 0.0f),
-		VGet(0.0f, 1.0f, 0.0f));
+	Vector3 cameraPosition(0.0f, 0.0f, -30.0f);
+	Vector3 cameraTarget(0.0f, 0.0f, 0.0f);
+	Vector3 cameraUp(0.0f, 1.0f, 0.0f);
+	SetCameraPositionAndTragetAndUpVec(
+		cameraPosition, cameraTarget, cameraUp
+	);
+
+	Vector3 A(3, -1, 2);
+	Vector3 B(1, 5, -4);
+	Vector3 C(-1, 7, 6);
+
+	Vector3 AB = B - A;
+	Vector3 AC = C - A;
+	Vector3 BC = C - B;
+	Vector3 BA = A - B;
+	Vector3 CA = A - C;
+	Vector3 CB = B - C;
+
+	Vector3 n = AB;
+	n.Cross(BC);
+	n.Normalize();
 
 	Vector3 position(0, 0, 0);				//位置
 	Vector3 velocity(0.0f, 0.0f, 0.5f);		//速度
@@ -82,11 +104,32 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 		//---------  ここからプログラムを記述  ----------//
 
 		// 更新処理
-		position += velocity;
+		Vector3 g = (A + B + C) / 3;
+		Vector3 v = cameraPosition - g;
+		v.Normalize();
+
+		unsigned color = GetColor(255, 255, 255);
+
+		if (v.Dot(n) > 0) {
+			color = GetColor(255, 0, 0);
+		}
 
 		//描画
 		ClearDrawScreen();	//画面を消去
-		DrawSphere3D(position, 80.0f, 32, 0xff0000, 0xffffff, true);
+		DrawLine3D(A, B, color);
+		DrawLine3D(B, C, color);
+		DrawLine3D(C, A, color);
+
+
+		Vector3 nA = n + (A - g);
+		Vector3 nB = n + (B - g);
+		Vector3 nC = n + (C - g);
+
+		DrawLine3D(A, nA, 0x00ff00);
+		DrawLine3D(B, nB, 0x00ff00);
+		DrawLine3D(C, nC, 0x00ff00);
+
+		//DrawSphere3D(position, 80.0f, 32, 0xff0000, 0xffffff, true);
 
 		/*Vector2 a(3, 2);
 		Vector2 b(-2, 4);
@@ -143,4 +186,13 @@ int DrawLine3D(const Vector3& Pos1, const Vector3& Pos2, const unsigned int Colo
 	VECTOR p2 = { Pos2.x, Pos2.y, Pos2.z };
 
 	return DrawLine3D(p1, p2, Color);
+}
+
+//DxLib => int SetCameraPositionAndTragetAndUpVec(VECTOR Position, VECTOR Target, VECTOR Up);
+int SetCameraPositionAndTragetAndUpVec(const Vector3& cameraPos, const Vector3& cameraTarget, const Vector3& cameraUp) {
+	VECTOR position = { cameraPos.x, cameraPos.y, cameraPos.z };
+	VECTOR target = { cameraTarget.x, cameraTarget.y, cameraTarget.z };
+	VECTOR up = { cameraUp.x, cameraUp.y, cameraUp.z };
+
+	return SetCameraPositionAndTargetAndUpVec(position, target, up);
 }
